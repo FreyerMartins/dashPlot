@@ -7,41 +7,52 @@
 #     "plotly",
 # ]
 # ///
-from dash import Dash, dash_table, dcc, callback, Output, Input
-import pandas as pd
+from dash import Dash, dcc, html, Input, Output
 import plotly.express as px
-import dash_mantine_components as dmc
 
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminder2007.csv')
+df = px.data.iris()
 
-app = Dash()
+app = Dash(__name__)
 
-app.layout = dmc.Container([
-    dmc.Title('My First App with Data, Graph, and Controls', size="h3"),
-    dmc.RadioGroup(
-            [dmc.Radio(i, value=i) for i in  ['pop', 'lifeExp', 'gdpPercap']],
-            id='my-dmc-radio-item',
-            value='lifeExp',
-            size="sm"
+app.layout = html.Div(
+    [
+        html.H4("Iris samples filtered by petal width"),
+        dcc.Graph(id="graph"),
+        html.Label("Petal Width:", htmlFor="range-slider"),
+        dcc.RangeSlider(
+            id="range-slider",
+            min=0,
+            max=2.5,
+            step=0.1,
+            marks={0: "0", 2.5: "2.5"},
+            value=[0.5, 2],
+            tooltip={
+                "always_visible": True,
+                "placement": "bottom"
+            },
         ),
-    dmc.Grid([
-        dmc.GridCol([
-            dash_table.DataTable(data=df.to_dict('records'), page_size=12, style_table={'overflowX': 'auto'})
-        ], span=6),
-        dmc.GridCol([
-            dcc.Graph(figure={}, id='graph-placeholder')
-        ], span=6),
-    ]),
-
-], fluid=True)
-
-@callback(
-    Output(component_id='graph-placeholder', component_property='figure'),
-    Input(component_id='my-dmc-radio-item', component_property='value')
+    ]
 )
-def update_graph(col_chosen):
-    fig = px.histogram(df, x='continent', y=col_chosen, histfunc='avg')
+
+
+@app.callback(
+    Output("graph", "figure"),
+    Input("range-slider", "value"),
+)
+def update_chart(slider_range):
+    low, high = slider_range
+    mask = (df.petal_width > low) & (df.petal_width < high)
+
+    fig = px.scatter_3d(
+        df[mask],
+        x="sepal_length",
+        y="sepal_width",
+        z="petal_width",
+        color="species",
+        hover_data=["petal_width"],
+    )
     return fig
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(debug=True)
